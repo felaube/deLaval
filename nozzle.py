@@ -34,8 +34,8 @@ def main():
     separating_dashed_line = np.zeros(x_initial_curve.shape)
 
     fig, ax = plt.subplots()
-    ax.plot(x_initial_curve, y_initial_curve)
-    ax.plot(x_initial_curve, y_initial_curve_mirror)
+    ax.plot(x_initial_curve, y_initial_curve, 'r-')
+    ax.plot(x_initial_curve, y_initial_curve_mirror, 'r-')
     ax.plot(x_initial_curve, separating_dashed_line, 'k--')
     ax.set_title("")
     ax.set_xlabel("")
