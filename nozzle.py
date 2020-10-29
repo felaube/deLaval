@@ -1,7 +1,10 @@
 import math
+import decimal
 import numpy as np
 import matplotlib.pyplot as plt
-
+from kaleido.scopes.plotly import PlotlyScope
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 """
 Definição inicial de constantes
 
@@ -55,6 +58,21 @@ def main():
     # plt.yticks(np.arange(-y_final_curve[-1]*1.25, y_final_curve[-1]*1.25, 5))
     plt.show()
 
+    # Quasi Unidimensional
+    graph_y_points = list(float_range(0, max(y_final_curve),max(y_final_curve)/len(y_final_curve)))
+    mach_matriz = []
+    for i in range(len(graph_y_points)):
+        mach_matriz.append(add_line_on_quasi_graph( graph_y_points[i], y_final_curve, len(x_final_curve)))
+
+    scope = PlotlyScope()
+    fig_quasi_unidimensional = make_subplots(rows=1, cols=1)
+    fig_quasi_unidimensional.add_trace(go.Heatmap(z=mach_matriz, colorbar=dict(title='Mach', titleside='right'), connectgaps=True, zsmooth='best'), 1, 1)
+    fig_quasi_unidimensional.update
+    fig_quasi_unidimensional.update_yaxes(title_text="Y axis (mm)", row=1, col=1)
+    fig_quasi_unidimensional.update_xaxes(title_text="X axis (mm)", row=1, col=1)
+    with open("quasi_unidimensional_graph.png", "wb") as f:
+        f.write(scope.transform(fig_quasi_unidimensional, format="png"))
+
 
 def empirical_theta_1(v_t, A_test_ratio=0, A_star=0, A_test=0):
     """
@@ -107,7 +125,7 @@ def A_ratio(M, gamma=1.4):
 def initial_curve(y_0, y_1, theta_1):
     """
     Retorna uma lista com os pontos da parte do bocal
-    da parte sônica ao ponto de inflexão,
+    da parte subsônica ao ponto de inflexão,
     respeitando os requisitos de razão de área,
     inclinação nula na garganta, e valores de y, inclinação
     e curvatura iguais às da curva terminal (parte divergente)
@@ -162,6 +180,45 @@ def foelsch(y_0, theta_1, v_1, v_test, M_1):
 
     return (x_array, y_array)
 
+def M_from_y(y_1, y_0 = Y_0, gamma=1.4):
+    """
+    Calcula o número de Mach dado o x em relação ao ponto inicial em mm,
+    de forma iterativa. Assume-se intervalos para o número de Mach,
+    que são atualizados e reduzidos a cada vez que há uma troca de sinal
+    na subtração entre o valor estimado e o valor 'A_ratio_target'.
+
+    y_1 - [mm]
+    """
+    lower_boundary = 1
+    upper_boundary = 1000
+
+    tolerance = 1e-6
+    A_ratio_target = (y_1/y_0) ** 2
+
+    while True:
+        interval = np.linspace(lower_boundary, upper_boundary, 10)
+
+        previous_est = math.inf
+        current_est = math.inf
+
+        for i, M in enumerate(interval):
+            current_A_ratio = A_ratio(M)
+
+            current_est = A_ratio_target - current_A_ratio
+
+            if abs(current_est) <= tolerance:
+                return M
+            elif i != 0 and current_est*previous_est < 0:
+                # Atualiza fronteiras de busca
+                # Regra do sanduíche (se houve mudança de sinal entre dois
+                # pontos, o zero da função está entre esses dois pontos)
+                lower_boundary = interval[i-1]
+                upper_boundary = M
+                break
+            previous_est = current_est
+
+
+
 
 def M_from_v(v_target, gamma=1.4):
     """
@@ -190,16 +247,31 @@ def M_from_v(v_target, gamma=1.4):
 
             if abs(current_est) <= tolerance:
                 return M
-            elif i != 0:
+            elif i != 0 and current_est*previous_est < 0:
                 # Atualiza fronteiras de busca
-                if current_est*previous_est < 0:
-                    # Regra do sanduíche (se houve mudança de sinal entre dois
-                    # pontos, o zero da função está entre esses dois pontos)
-                    lower_boundary = interval[i-1]
-                    upper_boundary = M
-                    break
+                # Regra do sanduíche (se houve mudança de sinal entre dois
+                # pontos, o zero da função está entre esses dois pontos)
+                lower_boundary = interval[i-1]
+                upper_boundary = M
+                break
             previous_est = current_est
 
+def add_line_on_quasi_graph(graph_y_point, y_curve, index):
+    graph_line = []
+    for _, y_point in enumerate(y_curve):
+        if (y_point < graph_y_point):
+            graph_line.append(0)
+        else:
+            graph_line.append(M_from_y(y_point))
+    
+    return graph_line
+
+
+
+def float_range(start, stop, step):
+  while start < stop:
+    yield float(start)
+    start += decimal.Decimal(step)
 
 if __name__ == "__main__":
     main()
