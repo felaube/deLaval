@@ -10,7 +10,7 @@ Definição inicial de constantes
 
 GAMMA [-]: Razão de calores específicos do gás
 M_TEST [-]: Número de Mach na seção de testes
-Y_0 [-]: Raio na garganta do bocal, normalizado pelo comprimento do bocal
+Y_0 [mm]: Raio na garganta do bocal
 """
 
 GAMMA = 1.4
@@ -58,15 +58,22 @@ def main():
     # plt.yticks(np.arange(-y_final_curve[-1]*1.25, y_final_curve[-1]*1.25, 5))
     plt.show()
 
+    throat_index = np.where(y_initial_curve == 10)[0][0]
+
     # Quasi Unidimensional
-    graph_y_points = list(float_range(0, max(y_final_curve),max(y_final_curve)/len(y_final_curve)))
+    graph_y_points = list(float_range(0, max(y_final_curve), max(y_final_curve)/len(y_final_curve)))
     mach_matriz = []
     for i in range(len(graph_y_points)):
-        mach_matriz.append(add_line_on_quasi_graph( graph_y_points[i], y_final_curve, len(x_final_curve)))
+        mach_matriz.append(add_line_on_quasi_graph(graph_y_points[i], 
+                                                   np.concatenate([y_initial_curve[throat_index:], y_final_curve]),
+                                                   len(np.concatenate([x_initial_curve[throat_index:], x_final_curve]))))
 
     scope = PlotlyScope()
     fig_quasi_unidimensional = make_subplots(rows=1, cols=1)
-    fig_quasi_unidimensional.add_trace(go.Heatmap(z=mach_matriz, colorbar=dict(title='Mach', titleside='right'), connectgaps=True, zsmooth='best'), 1, 1)
+    fig_quasi_unidimensional.add_trace(go.Heatmap(z=mach_matriz,
+                                                  x=np.concatenate([x_initial_curve[throat_index:], x_final_curve]),
+                                                  y=graph_y_points,
+                                                  colorbar=dict(title='Mach', titleside='right'), connectgaps=True, zsmooth='best'), 1, 1)
     fig_quasi_unidimensional.update
     fig_quasi_unidimensional.update_yaxes(title_text="Y axis (mm)", row=1, col=1)
     fig_quasi_unidimensional.update_xaxes(title_text="X axis (mm)", row=1, col=1)
@@ -180,7 +187,8 @@ def foelsch(y_0, theta_1, v_1, v_test, M_1):
 
     return (x_array, y_array)
 
-def M_from_y(y_1, y_0 = Y_0, gamma=1.4):
+
+def M_from_y(y_1, y_0=Y_0, gamma=1.4):
     """
     Calcula o número de Mach dado o x em relação ao ponto inicial em mm,
     de forma iterativa. Assume-se intervalos para o número de Mach,
@@ -216,8 +224,6 @@ def M_from_y(y_1, y_0 = Y_0, gamma=1.4):
                 upper_boundary = M
                 break
             previous_est = current_est
-
-
 
 
 def M_from_v(v_target, gamma=1.4):
@@ -256,6 +262,7 @@ def M_from_v(v_target, gamma=1.4):
                 break
             previous_est = current_est
 
+
 def add_line_on_quasi_graph(graph_y_point, y_curve, index):
     graph_line = []
     for _, y_point in enumerate(y_curve):
@@ -263,15 +270,15 @@ def add_line_on_quasi_graph(graph_y_point, y_curve, index):
             graph_line.append(0)
         else:
             graph_line.append(M_from_y(y_point))
-    
+
     return graph_line
 
 
-
 def float_range(start, stop, step):
-  while start < stop:
-    yield float(start)
-    start += decimal.Decimal(step)
+    while start < stop:
+        yield float(start)
+        start += decimal.Decimal(step)
+
 
 if __name__ == "__main__":
     main()
