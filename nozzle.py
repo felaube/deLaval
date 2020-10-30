@@ -11,11 +11,15 @@ Definição inicial de constantes
 GAMMA [-]: Razão de calores específicos do gás
 M_TEST [-]: Número de Mach na seção de testes
 Y_0 [mm]: Raio na garganta do bocal
+INITIAL_CURVE_INTERVAL [mm]: intervalo da coordenada x utilizado na contrução da curva inicial
+MACH_INTERVAL [-]: intervalo de Mach utilizado na construção da curva final
 """
 
 GAMMA = 1.4
 M_TEST = 4
 Y_0 = 10
+INITIAL_CURVE_INTERVAL = 1
+MACH_INTERVAL = 0.002
 
 
 def main():
@@ -39,6 +43,9 @@ def main():
     y_1 = y_final_curve[0]
 
     x_initial_curve, y_initial_curve = initial_curve(Y_0, y_1, theta_1_rad)
+
+    np.savetxt("nozzle_x.csv", np.concatenate([x_initial_curve, x_final_curve]), fmt='%s', delimiter=";")
+    np.savetxt("nozzle_y.csv", np.concatenate([y_initial_curve, y_final_curve]), fmt='%s', delimiter=";")
 
     fig, ax = plt.subplots()
     ax.plot(x_initial_curve, y_initial_curve, 'r-')
@@ -141,7 +148,7 @@ def initial_curve(y_0, y_1, theta_1):
     theta_1 [rad]
     """
     x_1 = 3/(2*math.tan(theta_1))*(y_1 - y_0)
-    x = np.arange(-50, x_1, 0.01)
+    x = np.arange(-100, x_1, INITIAL_CURVE_INTERVAL)
     y = y_0 + math.tan(theta_1)/x_1*(x ** 2)*(1 - x/(3*x_1))
 
     return (x, y)
@@ -166,7 +173,7 @@ def foelsch(y_0, theta_1, v_1, v_test, M_1):
 
     r_1 = y_1/math.sin(theta_1)
 
-    M_array = np.arange(M_1, M_TEST, 0.01)
+    M_array = np.arange(M_1, M_TEST, MACH_INTERVAL)
     x_array = np.zeros(M_array.shape)
     y_array = np.zeros(M_array.shape)
 
