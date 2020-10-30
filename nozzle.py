@@ -23,12 +23,10 @@ MACH_INTERVAL = 0.002
 
 
 def main():
+    # Calcular parâmetros iniciais fixos da tubeira
     v_test_rad, v_test_deg = v(M_TEST)
 
     A_test_ratio = A_ratio(M_TEST)
-
-    # theta_1_max_rad = v_test_rad/2
-    # theta_1_max_deg = v_test_deg/2
 
     theta_1_rad, theta_1_deg = empirical_theta_1(v_test_rad, A_test_ratio)
 
@@ -37,16 +35,19 @@ def main():
 
     M_1 = M_from_v(v_1_rad)
 
+    # Determinar coordenadas depois do ponto de inflexão, utilizando o método de Foelsch
     x_final_curve, y_final_curve = foelsch(Y_0, theta_1_rad, v_1_rad,
                                            v_test_rad, M_1)
 
     y_1 = y_final_curve[0]
 
+    # Determinar coordenadas antes do ponto de inflexão
     x_initial_curve, y_initial_curve = initial_curve(Y_0, y_1, theta_1_rad)
 
     np.savetxt("nozzle_x.csv", np.concatenate([x_initial_curve, x_final_curve]), fmt='%s', delimiter=";")
     np.savetxt("nozzle_y.csv", np.concatenate([y_initial_curve, y_final_curve]), fmt='%s', delimiter=";")
 
+    # Plotar resultados
     fig, ax = plt.subplots()
     ax.plot(x_initial_curve, y_initial_curve, 'r-')
     ax.plot(x_initial_curve, -y_initial_curve, 'r-')
@@ -58,11 +59,8 @@ def main():
     ax.set_xlabel("")
     ax.set_ylabel("")
 
-    # plt.grid()
     plt.xlim(x_initial_curve[0], x_final_curve[-1]*1.05)
     plt.ylim(-y_final_curve[-1]*2, y_final_curve[-1]*2)
-    # plt.xticks(np.arange(x_initial_curve[0], x_final_curve[-1]*1.05, 5))
-    # plt.yticks(np.arange(-y_final_curve[-1]*1.25, y_final_curve[-1]*1.25, 5))
     plt.show()
 
     throat_index = np.where(y_initial_curve == 10)[0][0]
@@ -75,11 +73,15 @@ def main():
                                                    np.concatenate([y_initial_curve[throat_index:], y_final_curve]),
                                                    len(np.concatenate([x_initial_curve[throat_index:], x_final_curve]))))
 
+    # Espelhar resultados de Mach e pontos de y
+    mirror = mach_matriz[::-1]
+    mirror_y = [-x for x in graph_y_points[::-1]]
+
     scope = PlotlyScope()
     fig_quasi_unidimensional = make_subplots(rows=1, cols=1)
-    fig_quasi_unidimensional.add_trace(go.Heatmap(z=mach_matriz,
+    fig_quasi_unidimensional.add_trace(go.Heatmap(z=mirror + mach_matriz,
                                                   x=np.concatenate([x_initial_curve[throat_index:], x_final_curve]),
-                                                  y=graph_y_points,
+                                                  y=mirror_y + graph_y_points,
                                                   colorbar=dict(title='Mach', titleside='right'), connectgaps=True, zsmooth='best'), 1, 1)
     fig_quasi_unidimensional.update
     fig_quasi_unidimensional.update_yaxes(title_text="Y axis (mm)", row=1, col=1)
