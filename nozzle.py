@@ -20,8 +20,6 @@ M_TEST = 4
 Y_0 = 10
 INITIAL_CURVE_INTERVAL = 1
 MACH_INTERVAL = 0.002
-
-
 def main():
     # Calcular parâmetros iniciais fixos da tubeira
     v_test_rad, v_test_deg = v(M_TEST)
@@ -66,7 +64,7 @@ def main():
     throat_index = np.where(y_initial_curve == 10)[0][0]
 
     # Quasi Unidimensional
-    graph_y_points = list(float_range(0, max(y_final_curve), max(y_final_curve)/len(y_final_curve)))
+    graph_y_points = list(float_range(0, 200, max(y_final_curve)/len(y_final_curve)))
     mach_matriz = []
     for i in range(len(graph_y_points)):
         mach_matriz.append(add_line_on_quasi_graph(graph_y_points[i], 
@@ -89,6 +87,39 @@ def main():
     with open("quasi_unidimensional_graph.png", "wb") as f:
         f.write(scope.transform(fig_quasi_unidimensional, format="png"))
 
+def quasi_foelsch_graph_relation():
+    mach_list_by_foelsch = np.arange(1.1,5,0.1)
+    mach_list_by_qse_uni = []
+    for _, M_TEST_t in enumerate(mach_list_by_foelsch):
+        # Calcular parâmetros iniciais fixos da tubeira
+        v_test_rad, v_test_deg = v(M_TEST_t)
+
+        A_test_ratio = A_ratio(M_TEST_t)
+
+        theta_1_rad, theta_1_deg = empirical_theta_1(v_test_rad, A_test_ratio)
+
+        v_1_rad = v_test_rad - theta_1_rad
+        v_1_deg = v_test_deg - theta_1_deg
+
+        M_1 = M_from_v(v_1_rad)
+
+        # Determinar coordenadas depois do ponto de inflexão, utilizando o método de Foelsch
+        x_final_curve, y_final_curve = foelsch(Y_0, theta_1_rad, v_1_rad,
+                                            v_test_rad, M_1)
+                                            
+        mach_list_by_qse_uni.append(M_from_y(max(y_final_curve)))
+
+    # Plotar resultados
+    fig, ax = plt.subplots()
+    ax.plot(mach_list_by_qse_uni, mach_list_by_foelsch, 'r-')
+    ax.set_title("Relação Mach saída Foelsch x Quasi-Unidimensional")
+    ax.set_xlabel("Mach saída Quasi-Unidimensional")
+    ax.set_ylabel("Mach saída Foelsch")
+    ax.set_ylim([1,8.5])
+    ax.set_xlim([1,8.5])
+
+    plt.grid()
+    plt.show()
 
 def empirical_theta_1(v_t, A_test_ratio=0, A_star=0, A_test=0):
     """
